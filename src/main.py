@@ -72,6 +72,14 @@ def plotNDVI(nir,nir_meta,red,red_meta,filename):
     # plt.close()
     return None
 
+def fov_plane_intercept():
+    '''From an input of `X,Y,Z, ψ, φ, θ,h,f`, determine the four corner coordinate pairs of the fov as it 
+    intersects the earth'''
+
+
+    pass
+
+
 def rgb_rot(red,green,blue,date, rot_deg,resample=Image.Resampling.BICUBIC):
     ''' 
     Make an RGB image that is rotated by a specified angle in degrees. 
@@ -103,6 +111,7 @@ def fetch_landsat(fov_center_coord_pair, fov_extent):
     '''
 
 
+
     # Initiate pystac client
     LandsatSTAC = Client.open("https://landsatlook.usgs.gov/stac-server", headers=[])
 
@@ -125,6 +134,9 @@ def fetch_landsat(fov_center_coord_pair, fov_extent):
     file_content = load(open(os.path.join('../rois',file_path))) # type dict
     geometry = file_content["features"][0]["geometry"]   #type dict
     # bbox = bounds(geometry) # used to slice the images that return from the following query.
+    ###################################
+    # HANDLE THE ROTATION NONSENSE HERE
+    ###################################
     geo_rotated = transform_rotate(Feature(geometry=geometry), 25,pivot=None)['geometry']
     bbox = bounds(geo_rotated) # used to slice the images that return from the following query.
     breakpoint() # check that the geo_rotated is the same datatype as geometry
