@@ -9,28 +9,27 @@ Notes:
         "rasterio.errors.RasterioIOError: CURL error: error setting certificate file: /etc/ssl/certs/ca-certificates.crt"
 
 '''
-from json import load
-# from lib2to3.pgen2 import driver
-import satsearch
-from pystac_client import Client
-import wget
 import os
 import boto3
+import argparse
+import numpy as np
+from json import load
+from PIL import Image
 import rasterio as rio
 from pyproj import Transformer
-from rasterio.features import bounds
-from rasterio.plot import show
 import matplotlib.pyplot as plt
-import numpy as np
+from pystac_client import Client
+from rasterio.features import bounds
+from geojson import Polygon, Feature
+from turfpy.transformation import transform_rotate # for rotational transforms
 
-import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('roi',help='short name for roi in roi dir', type = str, default="")
 parser.add_argument('-l','--limit',help='limit landsat download count', type = int, default=10)
 args = parser.parse_args()
 
-# Set the SSL certificat location
+# Set the SSL certificats location. Copy/paste from the typtical location it lives in if you run into issues
 os.environ['CURL_CA_BUNDLE'] = '/etc/ssl/certs/cacert.pem' # see note 1 above
 
 # Define the FOV of the footprint of your recent collect
@@ -73,9 +72,28 @@ def plotNDVI(nir,nir_meta,red,red_meta,filename):
     # plt.close()
     return None
 
-def plotRGB(red,blue,green):
-    ''' show the RGB true color composite image from the R,G,B bands'''
-    pass
+def rgb_rot(red,green,blue,date, rot_deg,resample=Image.Resampling.BICUBIC):
+    ''' 
+    Make an RGB image that is rotated by a specified angle in degrees. 
+    Resample is defaulted to bicubic to better handle the rotation'''
+    
+    # normalize the bands
+    r = red/np.max(red)
+    b = blue/np.max(blue)
+    g = green/np.max(green)
+
+    #make image stack using numpy and cast to 8bit
+    rgb_uint8 = (np.dstack((r,g,b)) * 255.999) .astype(np.uint8)  
+    img = Image.fromarray(rgb_uint8)
+    
+    # Rotate the image
+    img = img.rotate(rot_deg,resample=Image.Resampling.BICUBIC,expand=False)
+    
+    # Save the RGB rotated Composite
+    fpath = f"../data/RGB_test_rotDeg_{rot_deg}_{args.roi}_{date}.jpeg"
+    print(f"Saving RGB rotated composite...\n\t{fpath}")
+    img.save(fpath)
+    return None
 
 def fetch_landsat(fov_center_coord_pair, fov_extent):
     '''get the latest landsat scene at the coordinate pair center location. build RGB composite. 
@@ -85,12 +103,8 @@ def fetch_landsat(fov_center_coord_pair, fov_extent):
     '''
 
 
-
-
     # Initiate pystac client
     LandsatSTAC = Client.open("https://landsatlook.usgs.gov/stac-server", headers=[])
-
-
 
 
 
@@ -104,15 +118,29 @@ def fetch_landsat(fov_center_coord_pair, fov_extent):
         print(f"\n\n{'*'*30}   ERROR   {'*'*30}\nNo such results for the given roi of: '{args.roi}'. Exiting.\n\n")
         exit()
 
-    file_content = load(open(os.path.join('../rois',file_path)))
-    geometry = file_content["features"][0]["geometry"]
-    bbox = bounds(geometry)
+
+
+
+    # Structure the query
+    file_content = load(open(os.path.join('../rois',file_path))) # type dict
+    geometry = file_content["features"][0]["geometry"]   #type dict
+    # bbox = bounds(geometry) # used to slice the images that return from the following query.
+    geo_rotated = transform_rotate(Feature(geometry=geometry), 25,pivot=None)['geometry']
+    bbox = bounds(geo_rotated) # used to slice the images that return from the following query.
+    breakpoint() # check that the geo_rotated is the same datatype as geometry
+
     timeRange = '2021-06-01/2022-06-01'
     LandsatSearch       = LandsatSTAC.search ( 
-        intersects      = geometry,               # from geojson defined ROI
+        # intersects      = geometry,               # from geojson defined ROI
+        intersects      = geo_rotated,               # from geojson defined ROI
         datetime        = timeRange,              # time range of interest
         query           = ['eo:cloud_cover95'],   # min acceptable cloud cover 
         collections     = ["landsat-c2l2-sr"] )   # the product to search for (c212-sr = collection 2 level 1 )
+    
+    
+    
+
+
     # Convert each returned item to dictionary
     Landsat_items = [i.to_dict() for i in LandsatSearch.get_items()]
 
@@ -128,7 +156,6 @@ def fetch_landsat(fov_center_coord_pair, fov_extent):
 
 
 
-
     # For each item in the collection get the S3 link for R,G,B,NIR,SW1,SW2,and Date
     for i,item in enumerate(Landsat_items[0:args.limit]):
         blue_s3     = item['assets']['blue']['alternate']['s3']['href']
@@ -138,25 +165,38 @@ def fetch_landsat(fov_center_coord_pair, fov_extent):
         swir16_s3   = item['assets']['swir16']['alternate']['s3']['href']
         swir22_s3   = item['assets']['swir22']['alternate']['s3']['href']
         date        = item['properties']['datetime'][0:10]
-
+        #breakpoint()
         print("Landsat item number " + str(i) + "/" + str(len(Landsat_items)) + " " + date)
         
-        red,red_meta        = getSubset(aws_session, red_s3, bbox)
+        # the actual download from AWS S3 href and crop to bbox
+        red,red_meta        = getSubset(aws_session, red_s3, bbox) 
         nir,nir_meta        = getSubset(aws_session, nir_s3, bbox)
         blue,blue_meta      = getSubset(aws_session, blue_s3, bbox)
         green,green_meta    = getSubset(aws_session, green_s3, bbox)
         swir16,swir16_meta  = getSubset(aws_session, swir16_s3, bbox)
         swir22,swir22_meta  = getSubset(aws_session, swir22_s3, bbox)
+
+
+
+
+
+        # Make an RGB reference image rotated by N deg (+=CCW, -=CW)
+        rgb_rot(red,green,blue,date,rot_deg=0)
+
+
+
+
+        '''
         # breakpoint() # looking for crs of the bands, just one but any one will do. 
         rgb_landsat_image = rio.open(
-            f"../data/landsat_{args.roi}_{date}_Scene{i}.tif","w",
+            f"../data/landsat_{args.roi}_{date}_MYRGB_Scene{i}.tif","w",
             driver="GTiff", # save as geotiff
             height=red_meta['height'], # pixels tall
             width=red_meta['width'], # pixels wide
             count = 3, # number of bands for each "RGB" image 
             nodata=red_meta['nodata'],
             dtype = red_meta['dtype'],
-            crs = red_meta['crs'],
+            crs = None,#red_meta['crs'],
             transform=red_meta['transform']
         )
         # Using rasterio to write the downloaded bands to tiffs in ../data
@@ -168,7 +208,7 @@ def fetch_landsat(fov_center_coord_pair, fov_extent):
         # rgb_landsat_image.write(swir22,6)
 
         rgb_landsat_image.close()
-
+        '''
 
     return Landsat_items
 items = fetch_landsat(None, None)
