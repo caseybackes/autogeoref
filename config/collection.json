@@ -1,0 +1,94 @@
+{    
+    "id":"xplore-visual-level1A",
+    "type":"Collection",
+    "stac_version":"1.0.0",
+    "stac_extensions":[
+        "https://stac-extensions.github.io/eo/v1.0.0/schema.json",
+        "https://stac-extensions.github.io/projection/v1.0.0/schema.json",
+        "https://stac-extensions.github.io/view/v1.0.0/schema.json"
+    ],
+    "title":"Xplore Visible Band Data Product L1A",
+    "description":"Georeferenced with geometric and radiometric calibrations applied. Values in DN.",
+    "keywords":[
+        "L1A",
+        "Visual",
+        "Calibrated",
+        "Georeferenced",
+        "Geolocated",
+        "Radiometric",
+        "Level1A",
+        "Level1"
+    ],
+    "providers":[
+        {
+            "name":"Xplore Inc",
+            "description":"Remote sensing data provider.",
+            "roles":[
+                "producer",
+                "provider"
+            ]
+        }],
+    "extent":{
+        "spatial": {
+            "bbox":[
+                -180.0,
+                -90.0,
+                180.0,
+                90.0
+            ]
+        },
+        "temporal":{
+            "interval": [
+                "2023-01-11T22:00:00.000Z",
+                "2025-01-11T22:00:00.000Z"
+                
+            ]
+        }
+    },    
+    "license":"Proprietary",
+    "summaries":{
+        "platform":[
+            "xleo-1",
+            "xleo-2",
+            "xleo-3"
+        ],
+        "constellation":[
+            "xleo"
+        ],
+        "instruments":[
+            "Triscape200",
+            "Hyperscape100-A",
+            "Hyperscape100-B",
+            "UVTelescope-A",
+            "UVTelescope-B",
+            "Argus_IR_Spectrometer",
+            "AIS_Reciever",
+            "ADSB_Reciever",
+            "Forward_Looking_Imager"
+        ],
+        "gsd":{
+            "minimum":2.5,
+            "maximum":1.580
+        },
+        "eo:cloud_cover":{
+            "minimum":0.00,
+            "maximum":100.00
+        },
+        "proj:epsg":{
+            "minimum":32659,
+            "maximum":32659
+        },
+        "view:sun_elevation":{
+            "minimum":0.00,
+            "maximum":90.00
+        },
+        "view:off-nadir":{
+            "minimum":0.00,
+            "maximum":65.00
+        },
+        
+    }
+
+
+
+}
