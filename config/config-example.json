@@ -1,19 +1,19 @@
 {
-    'platform' : [
+    "platform" : [
         {
-            'name' : 'xleo-1',
-            'instruments' : 'triscape100', 'hyperscape100', 'uvt1','uvt2',
-            'place' : 'none'
+            "name" : "xleo-1",
+            "instruments" : ["triscape100", "hyperscape100", "uvt1","uvt2"],
+            "place" : "none"
         },
         {
-            'name' : 'Jane Doe',
-            'department' : 'Software Engineering',
-            'place' : 'Remote'
+            "name" : "Jane Doe",
+            "department" : "Software Engineering",
+            "place" : "Remote"
         },
         {
-            'name' : 'Don Joe',
-            'department' : 'Software Engineering',
-            'place' : 'Office'
+            "name" : "Don Joe",
+            "department" : "Software Engineering",
+            "place" : "Office"
         }
     ]
 }
