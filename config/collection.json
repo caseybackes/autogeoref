@@ -85,7 +85,7 @@
         "view:off-nadir":{
             "minimum":0.00,
             "maximum":65.00
-        },
+        }
         
     }
 
